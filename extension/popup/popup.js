@@ -153,22 +153,52 @@ if (fetchButton) {
                 action: 'collectOSINT',
                 ipAddress: ipAddress,
             }, (response) => {
+                // Response might be undefined if popup was closed/reopened or timeout
+                if (chrome.runtime.lastError) {
+                    console.log('Message error (may be timeout):', chrome.runtime.lastError.message);
+                    // Check storage for results (in case response timed out but collection completed)
+                    setTimeout(() => {
+                        checkForStoredResults(ipAddress);
+                    }, 2000);
+                    return;
+                }
                 if (!fetchButton)
                     return;
                 fetchButton.disabled = false;
                 fetchButton.textContent = 'Get Intel';
-                if (chrome.runtime.lastError) {
-                    updateStatus(`Error: ${chrome.runtime.lastError.message}`, true);
-                    return;
-                }
                 if (response && response.success) {
                     updateStatus('Data collection complete!');
                     displayResults(response.data);
                 }
                 else {
-                    updateStatus(response?.error || 'Failed to collect OSINT data', true);
+                    // If no response or failed, check storage after a delay
+                    if (!response) {
+                        updateStatus('Collection in progress... Checking for results...');
+                        setTimeout(() => {
+                            checkForStoredResults(ipAddress);
+                        }, 3000);
+                    }
+                    else {
+                        updateStatus(response.error || 'Failed to collect OSINT data', true);
+                    }
                 }
             });
+            // Also set up polling to check for results (in case response times out)
+            let pollCount = 0;
+            const maxPolls = 30; // Check for 30 seconds
+            const pollInterval = setInterval(() => {
+                pollCount++;
+                if (pollCount >= maxPolls) {
+                    clearInterval(pollInterval);
+                    if (fetchButton && fetchButton.disabled) {
+                        checkForStoredResults(ipAddress);
+                    }
+                    return;
+                }
+                checkForStoredResults(ipAddress, () => {
+                    clearInterval(pollInterval);
+                });
+            }, 1000);
         }
         catch (error) {
             if (!fetchButton)
@@ -188,21 +218,33 @@ if (ipInput && fetchButton) {
         }
     });
 }
+/**
+ * Check for stored results (used when response times out)
+ */
+function checkForStoredResults(ipAddress, onSuccess) {
+    chrome.storage.local.get([`osint_${ipAddress}`], (result) => {
+        const data = result[`osint_${ipAddress}`];
+        if (data &&
+            ((data.sources && Object.keys(data.sources).length > 0) ||
+                (data.errors && data.errors.length > 0))) {
+            if (!fetchButton)
+                return;
+            fetchButton.disabled = false;
+            fetchButton.textContent = 'Get Intel';
+            updateStatus('Data collection complete!');
+            displayResults(data);
+            if (onSuccess)
+                onSuccess();
+        }
+    });
+}
 // Load any previously stored results on popup open
 window.addEventListener('DOMContentLoaded', () => {
     if (!ipInput)
         return;
     const currentIp = ipInput.value.trim();
     if (currentIp) {
-        chrome.runtime.sendMessage({
-            action: 'getStoredResults',
-            ipAddress: currentIp,
-        }, (response) => {
-            if (response && response.success && response.data) {
-                displayResults(response.data);
-                updateStatus('Loaded previous results');
-            }
-        });
+        checkForStoredResults(currentIp);
     }
 });
 //# sourceMappingURL=popup.js.map
