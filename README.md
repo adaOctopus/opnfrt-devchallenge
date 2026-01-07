@@ -1,5 +1,7 @@
 # Openfort Technical Take-Home Assessment
 
+===> CHECK SOLUTION_APPROACH.MD file for my solution.
+
 ## Overview
 
 Welcome to the Openfort take-home assessment! At Openfort, we're building the next generation of wallet tooling. This assessment will evaluate your technical abilities in our focus areas.
@@ -132,3 +134,4 @@ We'll evaluate your submission based on:
 We expect this assessment to take approximately 4 hours to complete. Quality is more important than speed, so take the time you need to deliver a program you're proud of. If you do not finish within the 4 hours, that's completely fine - we'd love to see your progress regardless.
 
 Good luck, and we look forward to seeing your work!
+
