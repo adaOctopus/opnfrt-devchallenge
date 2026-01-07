@@ -9,15 +9,20 @@
  * @returns Extracted abuse and reputation data
  */
 async function scrapeAbuseIPDB(tabId, ipAddress) {
+    console.log('[AbuseIPDB] Starting scrape for tab:', tabId);
     const page = await CDP.createPage(tabId);
+    console.log('[AbuseIPDB] CDP.Page created, CDP attached');
     try {
         // Navigate to AbuseIPDB
         const url = `https://www.abuseipdb.com/check/${ipAddress}`;
+        console.log('[AbuseIPDB] Navigating to:', url);
         await page.goto(url);
+        console.log('[AbuseIPDB] Navigation complete');
         // Wait for page to load
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000);
         // Wait for main content
         await page.waitForSelector('body', { timeout: 10000 });
+        console.log('[AbuseIPDB] Body loaded');
         const data = {
             source: 'AbuseIPDB',
             ip: ipAddress,

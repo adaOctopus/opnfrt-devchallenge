@@ -16,18 +16,27 @@ export async function scrapeVirusTotal(
   tabId: number,
   ipAddress: string
 ): Promise<VirusTotalData> {
+  console.log('[VirusTotal] Starting scrape for tab:', tabId);
   const page: Page = await createPage(tabId);
+  console.log('[VirusTotal] Page created, CDP attached');
 
   try {
     // Navigate to VirusTotal IP search
     const url: string = `https://www.virustotal.com/gui/ip-address/${ipAddress}`;
+    console.log('[VirusTotal] Navigating to:', url);
     await page.goto(url);
+    console.log('[VirusTotal] Navigation complete');
 
     // Wait for page to load
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
-    // Wait for main content to appear
-    await page.waitForSelector('vt-ui-main-generic-report', { timeout: 10000 });
+    // Wait for main content to appear (with fallback if selector doesn't exist)
+    try {
+      await page.waitForSelector('vt-ui-main-generic-report', { timeout: 15000 });
+    } catch (error) {
+      console.log('[VirusTotal] Main selector not found, trying body...');
+      await page.waitForSelector('body', { timeout: 5000 });
+    }
 
     // Scroll to ensure content is loaded
     await page.scrollTo('vt-ui-main-generic-report');
@@ -44,6 +53,14 @@ export async function scrapeVirusTotal(
       asn: undefined,
       network: undefined,
     };
+
+    // Get page content first to see what's available
+    const pageText: string = await page.evaluate<string>(`
+      (function() {
+        return document.body ? document.body.innerText.substring(0, 5000) : '';
+      })()
+    `);
+    console.log('[VirusTotal] Page text sample:', pageText.substring(0, 200));
 
     // Extract reputation score
     try {
@@ -132,24 +149,15 @@ export async function scrapeVirusTotal(
       console.log('Could not extract network info:', error);
     }
 
-    // Get comprehensive page text for additional context
-    try {
-      const pageText: string = await page.evaluate<string>(`
-        (function() {
-          const mainContent = document.querySelector('vt-ui-main-generic-report');
-          return mainContent ? mainContent.innerText.substring(0, 2000) : '';
-        })()
-      `);
-      if (pageText) {
-        data.rawContent = pageText;
-      }
-    } catch (error) {
-      console.log('Could not extract raw content:', error);
+    // Store the page text we already extracted
+    if (pageText) {
+      data.rawContent = pageText;
     }
 
+    console.log('[VirusTotal] Scrape complete, returning data:', data);
     return data;
   } catch (error) {
-    console.error('VirusTotal scraping error:', error);
+    console.error('[VirusTotal] Scraping error:', error);
     const errorMessage: string =
       error instanceof Error ? error.message : 'Unknown error';
     return {
@@ -158,6 +166,7 @@ export async function scrapeVirusTotal(
       error: errorMessage,
     };
   } finally {
+    console.log('[VirusTotal] Detaching CDP context');
     await page.context.detach();
   }
 }

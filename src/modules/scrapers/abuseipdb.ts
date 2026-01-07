@@ -16,18 +16,23 @@ export async function scrapeAbuseIPDB(
   tabId: number,
   ipAddress: string
 ): Promise<AbuseIPDBData> {
+  console.log('[AbuseIPDB] Starting scrape for tab:', tabId);
   const page: Page = await createPage(tabId);
+  console.log('[AbuseIPDB] Page created, CDP attached');
 
   try {
     // Navigate to AbuseIPDB
     const url: string = `https://www.abuseipdb.com/check/${ipAddress}`;
+    console.log('[AbuseIPDB] Navigating to:', url);
     await page.goto(url);
+    console.log('[AbuseIPDB] Navigation complete');
 
     // Wait for page to load
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     // Wait for main content
     await page.waitForSelector('body', { timeout: 10000 });
+    console.log('[AbuseIPDB] Body loaded');
 
     const data: AbuseIPDBData = {
       source: 'AbuseIPDB',

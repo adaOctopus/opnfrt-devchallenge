@@ -89,6 +89,7 @@ async function closeTab(tabId: number): Promise<void> {
  * Collect OSINT data from all sources
  */
 async function collectOSINTData(ipAddress: string): Promise<OSINTResults> {
+  console.log('[OSINT] Starting collection for IP:', ipAddress);
   const results: OSINTResults = {
     ip: ipAddress,
     timestamp: new Date().toISOString(),
@@ -105,31 +106,42 @@ async function collectOSINTData(ipAddress: string): Promise<OSINTResults> {
 
   try {
     // Create all tabs first
+    console.log('[OSINT] Creating tabs...');
     tabs.virustotal = await createScrapingTab(
       `https://www.virustotal.com/gui/ip-address/${ipAddress}`
     );
+    console.log('[OSINT] VirusTotal tab created:', tabs.virustotal.id);
+    
     tabs.ipinfo = await createScrapingTab(`https://ipinfo.io/${ipAddress}`);
+    console.log('[OSINT] IPInfo tab created:', tabs.ipinfo.id);
+    
     tabs.abuseipdb = await createScrapingTab(
       `https://www.abuseipdb.com/check/${ipAddress}`
     );
+    console.log('[OSINT] AbuseIPDB tab created:', tabs.abuseipdb.id);
 
     // Wait for all tabs to load
+    console.log('[OSINT] Waiting for tabs to load...');
     await Promise.all([
       tabs.virustotal.id && waitForTabLoad(tabs.virustotal.id),
       tabs.ipinfo.id && waitForTabLoad(tabs.ipinfo.id),
       tabs.abuseipdb.id && waitForTabLoad(tabs.abuseipdb.id),
     ]);
+    console.log('[OSINT] All tabs loaded, starting scraping...');
 
     // Scrape data from each source in parallel
     const scrapingPromises: Promise<void>[] = [];
 
     if (tabs.virustotal?.id) {
+      console.log('[OSINT] Starting VirusTotal scrape...');
       scrapingPromises.push(
         VirusTotalScraper.scrapeVirusTotal(tabs.virustotal.id, ipAddress)
           .then((data) => {
+            console.log('[OSINT] VirusTotal scrape complete:', data);
             results.sources.virustotal = data;
           })
           .catch((error: Error) => {
+            console.error('[OSINT] VirusTotal scrape error:', error);
             results.errors.push({
               source: 'VirusTotal',
               error: error.message,
@@ -139,12 +151,15 @@ async function collectOSINTData(ipAddress: string): Promise<OSINTResults> {
     }
 
     if (tabs.ipinfo?.id) {
+      console.log('[OSINT] Starting IPInfo scrape...');
       scrapingPromises.push(
         IPInfoScraper.scrapeIPInfo(tabs.ipinfo.id, ipAddress)
           .then((data) => {
+            console.log('[OSINT] IPInfo scrape complete:', data);
             results.sources.ipinfo = data;
           })
           .catch((error: Error) => {
+            console.error('[OSINT] IPInfo scrape error:', error);
             results.errors.push({
               source: 'IPInfo',
               error: error.message,
@@ -154,12 +169,15 @@ async function collectOSINTData(ipAddress: string): Promise<OSINTResults> {
     }
 
     if (tabs.abuseipdb?.id) {
+      console.log('[OSINT] Starting AbuseIPDB scrape...');
       scrapingPromises.push(
         AbuseIPDBScraper.scrapeAbuseIPDB(tabs.abuseipdb.id, ipAddress)
           .then((data) => {
+            console.log('[OSINT] AbuseIPDB scrape complete:', data);
             results.sources.abuseipdb = data;
           })
           .catch((error: Error) => {
+            console.error('[OSINT] AbuseIPDB scrape error:', error);
             results.errors.push({
               source: 'AbuseIPDB',
               error: error.message,
@@ -168,13 +186,16 @@ async function collectOSINTData(ipAddress: string): Promise<OSINTResults> {
       );
     }
 
+    console.log('[OSINT] Waiting for all scrapes to complete...');
     await Promise.all(scrapingPromises);
+    console.log('[OSINT] All scrapes complete. Results:', results);
 
     // Store results in chrome.storage.local
     await new Promise<void>((resolve) => {
       chrome.storage.local.set(
         { [`osint_${ipAddress}`]: results },
         () => {
+          console.log('[OSINT] Results stored in chrome.storage.local');
           resolve();
         }
       );
@@ -235,14 +256,17 @@ chrome.runtime.onMessage.addListener(
       }
 
       // Start collection process
+      console.log('[Background] Received collectOSINT request for:', ipAddress);
       collectOSINTData(ipAddress)
         .then((results: OSINTResults) => {
+          console.log('[Background] Collection complete, sending response');
           sendResponse({
             success: true,
             data: results,
           });
         })
         .catch((error: Error) => {
+          console.error('[Background] Collection failed:', error);
           sendResponse({
             success: false,
             error: error.message,

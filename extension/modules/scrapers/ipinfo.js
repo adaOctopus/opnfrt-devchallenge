@@ -9,15 +9,20 @@
  * @returns Extracted geolocation and network data
  */
 async function scrapeIPInfo(tabId, ipAddress) {
+    console.log('[IPInfo] Starting scrape for tab:', tabId);
     const page = await CDP.createPage(tabId);
+    console.log('[IPInfo] CDP.Page created, CDP attached');
     try {
         // Navigate to IPInfo
         const url = `https://ipinfo.io/${ipAddress}`;
+        console.log('[IPInfo] Navigating to:', url);
         await page.goto(url);
+        console.log('[IPInfo] Navigation complete');
         // Wait for page to load
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000);
         // Wait for main content
         await page.waitForSelector('body', { timeout: 10000 });
+        console.log('[IPInfo] Body loaded');
         const data = {
             source: 'IPInfo',
             ip: ipAddress,

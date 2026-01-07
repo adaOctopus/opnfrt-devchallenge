@@ -16,18 +16,23 @@ export async function scrapeIPInfo(
   tabId: number,
   ipAddress: string
 ): Promise<IPInfoData> {
+  console.log('[IPInfo] Starting scrape for tab:', tabId);
   const page: Page = await createPage(tabId);
+  console.log('[IPInfo] Page created, CDP attached');
 
   try {
     // Navigate to IPInfo
     const url: string = `https://ipinfo.io/${ipAddress}`;
+    console.log('[IPInfo] Navigating to:', url);
     await page.goto(url);
+    console.log('[IPInfo] Navigation complete');
 
     // Wait for page to load
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     // Wait for main content
     await page.waitForSelector('body', { timeout: 10000 });
+    console.log('[IPInfo] Body loaded');
 
     const data: IPInfoData = {
       source: 'IPInfo',
