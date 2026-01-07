@@ -41,3 +41,9 @@ tmp/
 temp/
 *.tmp
 
+# TypeScript compiled output (we keep source in src/, compiled in extension/)
+extension/modules/
+extension/popup/
+extension/background.js
+extension/popup.js
+extension/*.js.map
