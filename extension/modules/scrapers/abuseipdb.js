@@ -9,7 +9,7 @@
  * @returns Extracted abuse and reputation data
  */
 async function scrapeAbuseIPDB(tabId, ipAddress) {
-    const page = await createPage(tabId);
+    const page = await CDP.createPage(tabId);
     try {
         // Navigate to AbuseIPDB
         const url = `https://www.abuseipdb.com/check/${ipAddress}`;

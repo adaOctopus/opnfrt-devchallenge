@@ -97,6 +97,11 @@ scrapers.forEach(({ file, global }) => {
     content = content.replace(/export\s+/g, '');
     content = content.replace(/import\s+.*from\s+['"].*['"];?\n/g, '');
     
+    // Fix createPage calls to use CDP global namespace
+    content = content.replace(/\bcreatePage\(/g, 'CDP.createPage(');
+    content = content.replace(/\bPage\b/g, 'CDP.Page');
+    content = content.replace(/\bCDPContext\b/g, 'CDP.CDPContext');
+    
     // Add global namespace export
     const funcName = content.match(/(?:export\s+)?(?:async\s+)?function\s+(\w+)/)?.[1] || 'scrape' + global.replace('Scraper', '');
     if (!content.includes(`self.${global}`) && !content.includes(`window.${global}`)) {
@@ -121,14 +126,15 @@ const backgroundPath = path.join(__dirname, 'extension', 'background.js');
 if (fs.existsSync(backgroundPath)) {
   let backgroundContent = fs.readFileSync(backgroundPath, 'utf8');
   
-  // Remove import statements
+  // Remove import statements and export statements
   backgroundContent = backgroundContent.replace(/^import\s+.*from\s+['"].*['"];?\n/gm, '');
   backgroundContent = backgroundContent.replace(/^\/\/.*Type imports.*\n/gm, '');
   backgroundContent = backgroundContent.replace(/^declare\s+.*\n/gm, '');
+  backgroundContent = backgroundContent.replace(/export\s+\{\s*\};?\s*\n?/g, ''); // Remove export {}
+  backgroundContent = backgroundContent.replace(/export\s+/g, ''); // Remove any other exports
   
-  // Add importScripts at the top if not already present
-  if (!backgroundContent.includes('importScripts')) {
-    const importScripts = `// Import modules using importScripts (Chrome extension compatible)
+  // Always add importScripts at the very top (before any code)
+  const importScripts = `// Import modules using importScripts (Chrome extension compatible)
 importScripts(
   'modules/cdp/core.js',
   'modules/scrapers/virustotal.js',
@@ -137,18 +143,12 @@ importScripts(
 );
 
 `;
-    
-    // Add importScripts after the initial comment
-    const commentMatch = backgroundContent.match(/^\/\*\*[\s\S]*?\*\/\s*/);
-    if (commentMatch) {
-      backgroundContent = backgroundContent.replace(
-        commentMatch[0],
-        commentMatch[0] + '\n' + importScripts
-      );
-    } else {
-      backgroundContent = importScripts + backgroundContent;
-    }
-  }
+  
+  // Remove any existing importScripts
+  backgroundContent = backgroundContent.replace(/\/\/ Import modules using importScripts[\s\S]*?importScripts\([^)]+\);\s*\n/g, '');
+  
+  // Add importScripts at the very beginning
+  backgroundContent = importScripts + backgroundContent;
   
   fs.writeFileSync(backgroundPath, backgroundContent, 'utf8');
   console.log('✅ Background service worker prepared\n');
@@ -159,9 +159,32 @@ const popupPath = path.join(__dirname, 'extension', 'popup', 'popup.js');
 if (fs.existsSync(popupPath)) {
   let popupContent = fs.readFileSync(popupPath, 'utf8');
   popupContent = popupContent.replace(/^import\s+.*from\s+['"].*['"];?\n/gm, '');
+  popupContent = popupContent.replace(/export\s+\{\s*\};?\s*\n?/g, ''); // Remove export {}
   popupContent = popupContent.replace(/export\s+/g, '');
   fs.writeFileSync(popupPath, popupContent, 'utf8');
 }
+
+// Step 5: Clean up all export {} statements in all JS files
+function removeExportsFromFile(filePath) {
+  if (fs.existsSync(filePath)) {
+    let content = fs.readFileSync(filePath, 'utf8');
+    content = content.replace(/export\s+\{\s*\};?\s*\n?/g, '');
+    content = content.replace(/export\s+/g, '');
+    fs.writeFileSync(filePath, content, 'utf8');
+  }
+}
+
+// Clean up all module files
+const moduleFiles = [
+  'extension/modules/cdp/core.js',
+  'extension/modules/scrapers/virustotal.js',
+  'extension/modules/scrapers/ipinfo.js',
+  'extension/modules/scrapers/abuseipdb.js'
+];
+
+moduleFiles.forEach(file => {
+  removeExportsFromFile(path.join(__dirname, file));
+});
 
 console.log('✨ Build complete! Extension ready in ./extension/');
 console.log('\n📝 Next steps:');

@@ -1,3 +1,11 @@
+// Import modules using importScripts (Chrome extension compatible)
+importScripts(
+  'modules/cdp/core.js',
+  'modules/scrapers/virustotal.js',
+  'modules/scrapers/ipinfo.js',
+  'modules/scrapers/abuseipdb.js'
+);
+
 /**
  * Background Service Worker
  * Orchestrates OSINT data collection from multiple sources using CDP automation
@@ -216,5 +224,4 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 chrome.runtime.onInstalled.addListener(() => {
     console.log('PostEvent OSINT Extension installed');
 });
-export {};
 //# sourceMappingURL=background.js.map

@@ -9,7 +9,7 @@
  * @returns Extracted threat intelligence data
  */
 async function scrapeVirusTotal(tabId, ipAddress) {
-    const page = await createPage(tabId);
+    const page = await CDP.createPage(tabId);
     try {
         // Navigate to VirusTotal IP search
         const url = `https://www.virustotal.com/gui/ip-address/${ipAddress}`;

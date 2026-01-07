@@ -9,7 +9,7 @@
  * @returns Extracted geolocation and network data
  */
 async function scrapeIPInfo(tabId, ipAddress) {
-    const page = await createPage(tabId);
+    const page = await CDP.createPage(tabId);
     try {
         // Navigate to IPInfo
         const url = `https://ipinfo.io/${ipAddress}`;
