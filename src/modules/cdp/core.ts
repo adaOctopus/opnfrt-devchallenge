@@ -47,7 +47,7 @@ export class CDPContext {
   public readonly tabId: number;
   private attached: boolean = false;
   private eventListeners: Map<string, EventHandler[]> = new Map();
-  private _listener: chrome.debugger.EventListener | null = null;
+  private _listener: ((source: chrome.debugger.Debuggee, method: string, params?: any) => void) | null = null;
 
   constructor(tabId: number) {
     this.tabId = tabId;
@@ -122,7 +122,7 @@ export class CDPContext {
     return new Promise<CDPCommandResult>((resolve, reject) => {
       chrome.debugger.sendCommand(
         { tabId: this.tabId },
-        `${domain}.${method}` as chrome.debugger.CDPCommand,
+        `${domain}.${method}`,
         params,
         (result: any) => {
           if (chrome.runtime.lastError) {
@@ -139,11 +139,11 @@ export class CDPContext {
    * Setup event listeners for CDP events
    */
   private _setupEventListeners(): void {
-    const listener: chrome.debugger.EventListener = (
+    const listener = (
       source: chrome.debugger.Debuggee,
       method: string,
       params?: any
-    ) => {
+    ): void => {
       if (source.tabId === this.tabId) {
         const key = `${(source as any).method || method}`;
         const handlers = this.eventListeners.get(key) || [];
