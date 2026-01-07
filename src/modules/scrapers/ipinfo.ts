@@ -29,10 +29,7 @@ export async function scrapeIPInfo(
 
     // Wait for page to load
     await page.waitForTimeout(3000);
-
-    // Wait for main content
-    await page.waitForSelector('body', { timeout: 10000 });
-    console.log('[IPInfo] Body loaded');
+    console.log('[IPInfo] Page should be loaded now');
 
     const data: IPInfoData = {
       source: 'IPInfo',

@@ -207,18 +207,53 @@ export class Page {
    * Navigate to a URL (abstracts Page.navigate CDP command)
    */
   async goto(url: string): Promise<void> {
+    console.log('[CDP] Enabling Page domain');
     await this.context.sendCommand('Page', 'enable');
+    console.log('[CDP] Navigating to:', url);
     await this.context.sendCommand('Page', 'navigate', { url });
+    console.log('[CDP] Navigate command sent');
 
-    // Wait for page to load
+    // Wait for page to load with timeout and fallback
     return new Promise<void>((resolve) => {
-      const onLoad: EventHandler = (params: any) => {
-        if (params?.name === 'load') {
+      let resolved = false;
+      
+      // Fallback: resolve after 5 seconds regardless (some pages don't fire events)
+      const fallbackTimeout = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
           this.context.off('Page.loadEventFired', onLoad);
+          this.context.off('Page.frameStoppedLoading', onFrameLoad);
+          console.log('[CDP] Using fallback timeout (5s), page should be loaded');
+          resolve();
+        }
+      }, 5000);
+
+      const onLoad: EventHandler = () => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(fallbackTimeout);
+          this.context.off('Page.loadEventFired', onLoad);
+          this.context.off('Page.frameStoppedLoading', onFrameLoad);
+          console.log('[CDP] Page.loadEventFired received');
           resolve();
         }
       };
+
+      const onFrameLoad: EventHandler = (params: any) => {
+        // Also listen for frameStoppedLoading as fallback
+        if (!resolved && params?.frameId) {
+          resolved = true;
+          clearTimeout(fallbackTimeout);
+          this.context.off('Page.loadEventFired', onLoad);
+          this.context.off('Page.frameStoppedLoading', onFrameLoad);
+          console.log('[CDP] Page.frameStoppedLoading received');
+          resolve();
+        }
+      };
+
+      console.log('[CDP] Setting up event listeners');
       this.context.on('Page.loadEventFired', onLoad);
+      this.context.on('Page.frameStoppedLoading', onFrameLoad);
     });
   }
 
@@ -229,33 +264,55 @@ export class Page {
     selector: string,
     options: WaitForSelectorOptions = {}
   ): Promise<void> {
+    // Special case: body should always exist after navigation
+    if (selector === 'body') {
+      console.log('[CDP] Skipping waitForSelector for body (always exists)');
+      await this._sleep(1000); // Just wait a bit for page to settle
+      return;
+    }
+
     const timeout: number = options.timeout || 30000;
     const startTime: number = Date.now();
+
+    // Enable Runtime domain for evaluate
+    try {
+      await this.context.sendCommand('Runtime', 'enable');
+    } catch (error) {
+      console.log('[CDP] Runtime domain already enabled or error:', error);
+    }
 
     while (Date.now() - startTime < timeout) {
       try {
         const result = await this.context.sendCommand('Runtime', 'evaluate', {
           expression: `
             (function() {
-              const element = document.querySelector('${selector}');
-              return element ? { found: true, visible: element.offsetParent !== null } : { found: false };
+              try {
+                const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+                return element ? { found: true, visible: element.offsetParent !== null } : { found: false };
+              } catch(e) {
+                return { found: false, error: e.message };
+              }
             })()
           `,
+          returnByValue: true,
         });
 
         const value = result.result?.value as ElementFound | undefined;
         if (value?.found) {
           if (!options.visible || value.visible) {
+            console.log(`[CDP] Selector found: ${selector}`);
             return;
           }
         }
       } catch (error) {
+        console.log(`[CDP] Error checking selector ${selector}:`, error);
         // Continue waiting
       }
 
       await this._sleep(500);
     }
 
+    console.error(`[CDP] Timeout waiting for selector: ${selector}`);
     throw new Error(`Timeout waiting for selector: ${selector}`);
   }
 
@@ -353,15 +410,30 @@ export class Page {
    * Extract text content from an element
    */
   async textContent(selector: string): Promise<string | null> {
-    await this.waitForSelector(selector);
+    // Don't wait for body selector
+    if (selector !== 'body') {
+      await this.waitForSelector(selector);
+    }
+
+    // Enable Runtime domain
+    try {
+      await this.context.sendCommand('Runtime', 'enable');
+    } catch (error) {
+      // Already enabled
+    }
 
     const result = await this.context.sendCommand('Runtime', 'evaluate', {
       expression: `
         (function() {
-          const element = document.querySelector('${selector}');
-          return element ? element.textContent.trim() : null;
+          try {
+            const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+            return element ? element.textContent.trim() : null;
+          } catch(e) {
+            return null;
+          }
         })()
       `,
+      returnByValue: true,
     });
 
     return (result.result?.value as string | null) || null;
@@ -371,13 +443,25 @@ export class Page {
    * Extract multiple text contents from matching selectors
    */
   async textContents(selector: string): Promise<string[]> {
+    // Enable Runtime domain
+    try {
+      await this.context.sendCommand('Runtime', 'enable');
+    } catch (error) {
+      // Already enabled
+    }
+
     const result = await this.context.sendCommand('Runtime', 'evaluate', {
       expression: `
         (function() {
-          const elements = Array.from(document.querySelectorAll('${selector}'));
-          return elements.map(el => el.textContent.trim()).filter(text => text);
+          try {
+            const elements = Array.from(document.querySelectorAll('${selector.replace(/'/g, "\\'")}'));
+            return elements.map(el => el.textContent.trim()).filter(text => text);
+          } catch(e) {
+            return [];
+          }
         })()
       `,
+      returnByValue: true,
     });
 
     return (result.result?.value as string[]) || [];
@@ -412,8 +496,16 @@ export class Page {
    * Execute JavaScript in page context
    */
   async evaluate<T = any>(expression: string): Promise<T> {
+    // Enable Runtime domain
+    try {
+      await this.context.sendCommand('Runtime', 'enable');
+    } catch (error) {
+      // Already enabled
+    }
+
     const result = await this.context.sendCommand('Runtime', 'evaluate', {
       expression,
+      returnByValue: true,
     });
 
     return result.result?.value as T;

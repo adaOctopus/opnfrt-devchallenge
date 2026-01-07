@@ -33,9 +33,11 @@ export async function scrapeVirusTotal(
     // Wait for main content to appear (with fallback if selector doesn't exist)
     try {
       await page.waitForSelector('vt-ui-main-generic-report', { timeout: 15000 });
+      console.log('[VirusTotal] Main selector found');
     } catch (error) {
-      console.log('[VirusTotal] Main selector not found, trying body...');
-      await page.waitForSelector('body', { timeout: 5000 });
+      console.log('[VirusTotal] Main selector not found, continuing anyway...');
+      // Don't wait for body - it should already exist
+      await page.waitForTimeout(2000);
     }
 
     // Scroll to ensure content is loaded

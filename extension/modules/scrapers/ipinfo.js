@@ -20,9 +20,7 @@ async function scrapeIPInfo(tabId, ipAddress) {
         console.log('[IPInfo] Navigation complete');
         // Wait for page to load
         await page.waitForTimeout(3000);
-        // Wait for main content
-        await page.waitForSelector('body', { timeout: 10000 });
-        console.log('[IPInfo] Body loaded');
+        console.log('[IPInfo] CDP.Page should be loaded now');
         const data = {
             source: 'IPInfo',
             ip: ipAddress,
