@@ -311,13 +311,9 @@ class Page {
         }
     }
     /**
-     * Extract text content from an element
+     * Extract text content from an element (doesn't wait - just tries to extract)
      */
     async textContent(selector) {
-        // Don't wait for body selector
-        if (selector !== 'body') {
-            await this.waitForSelector(selector);
-        }
         // Enable Runtime domain
         try {
             await this.context.sendCommand('Runtime', 'enable');
@@ -325,20 +321,26 @@ class Page {
         catch (error) {
             // Already enabled
         }
-        const result = await this.context.sendCommand('Runtime', 'evaluate', {
-            expression: `
-        (function() {
-          try {
-            const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
-            return element ? element.textContent.trim() : null;
-          } catch(e) {
+        try {
+            const result = await this.context.sendCommand('Runtime', 'evaluate', {
+                expression: `
+          (function() {
+            try {
+              const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+              return element ? element.textContent.trim() : null;
+            } catch(e) {
+              return null;
+            }
+          })()
+        `,
+                returnByValue: true,
+            });
+            return result.result?.value || null;
+        }
+        catch (error) {
+            console.log(`[CDP] Error extracting text from ${selector}:`, error);
             return null;
-          }
-        })()
-      `,
-            returnByValue: true,
-        });
-        return result.result?.value || null;
+        }
     }
     /**
      * Extract multiple text contents from matching selectors
@@ -367,19 +369,36 @@ class Page {
         return result.result?.value || [];
     }
     /**
-     * Get attribute value from an element
+     * Get attribute value from an element (doesn't wait - just tries to extract)
      */
     async getAttribute(selector, attribute) {
-        await this.waitForSelector(selector);
-        const result = await this.context.sendCommand('Runtime', 'evaluate', {
-            expression: `
-        (function() {
-          const element = document.querySelector('${selector}');
-          return element ? element.getAttribute('${attribute}') : null;
-        })()
-      `,
-        });
-        return result.result?.value || null;
+        // Enable Runtime domain
+        try {
+            await this.context.sendCommand('Runtime', 'enable');
+        }
+        catch (error) {
+            // Already enabled
+        }
+        try {
+            const result = await this.context.sendCommand('Runtime', 'evaluate', {
+                expression: `
+          (function() {
+            try {
+              const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+              return element ? element.getAttribute('${attribute}') : null;
+            } catch(e) {
+              return null;
+            }
+          })()
+        `,
+                returnByValue: true,
+            });
+            return result.result?.value || null;
+        }
+        catch (error) {
+            console.log(`[CDP] Error getting attribute from ${selector}:`, error);
+            return null;
+        }
     }
     /**
      * Wait for a specific amount of time
@@ -442,20 +461,36 @@ class Page {
         });
     }
     /**
-     * Scroll to element
+     * Scroll to element (doesn't wait - just tries to scroll)
      */
     async scrollTo(selector) {
-        await this.waitForSelector(selector);
-        await this.context.sendCommand('Runtime', 'evaluate', {
-            expression: `
-        (function() {
-          const element = document.querySelector('${selector}');
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        })()
-      `,
-        });
+        // Enable Runtime domain
+        try {
+            await this.context.sendCommand('Runtime', 'enable');
+        }
+        catch (error) {
+            // Already enabled
+        }
+        try {
+            await this.context.sendCommand('Runtime', 'evaluate', {
+                expression: `
+          (function() {
+            try {
+              const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            } catch(e) {
+              // Ignore
+            }
+          })()
+        `,
+                returnByValue: true,
+            });
+        }
+        catch (error) {
+            console.log(`[CDP] Error scrolling to ${selector}:`, error);
+        }
         await this._sleep(500);
     }
     /**

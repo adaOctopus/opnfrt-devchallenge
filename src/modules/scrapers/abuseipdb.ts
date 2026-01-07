@@ -46,22 +46,17 @@ export async function scrapeAbuseIPDB(
       lastReported: undefined,
     };
 
-    // Extract abuse confidence score
-    try {
-      const confidenceText: string | null = await page.textContent(
-        '[class*="confidence"], [class*="score"], [id*="confidence"]'
-      );
-      if (confidenceText) {
-        const match: RegExpMatchArray | null = confidenceText.match(/(\d+)%/);
-        if (match && match[1]) {
-          data.abuseConfidence = parseInt(match[1], 10);
-        } else {
-          // If no percentage found, store as null (type requires number | null)
-          data.abuseConfidence = null;
-        }
+    // Extract abuse confidence score (no waiting - just try)
+    const confidenceText: string | null = await page.textContent(
+      '[class*="confidence"], [class*="score"], [id*="confidence"]'
+    );
+    if (confidenceText) {
+      const match: RegExpMatchArray | null = confidenceText.match(/(\d+)%/);
+      if (match && match[1]) {
+        data.abuseConfidence = parseInt(match[1], 10);
+      } else {
+        data.abuseConfidence = null;
       }
-    } catch (error) {
-      console.log('Could not extract confidence score:', error);
     }
 
     // Extract IP status information
@@ -88,52 +83,36 @@ export async function scrapeAbuseIPDB(
       console.log('Could not extract status:', error);
     }
 
-    // Extract usage type
-    try {
-      const usageTypeText: string | null = await page.textContent(
-        '[class*="usage"], [class*="type"]'
-      );
-      if (usageTypeText) {
-        data.usageType = usageTypeText;
-      }
-    } catch (error) {
-      console.log('Could not extract usage type:', error);
+    // Extract usage type (no waiting - just try)
+    const usageTypeText: string | null = await page.textContent(
+      '[class*="usage"], [class*="type"]'
+    );
+    if (usageTypeText) {
+      data.usageType = usageTypeText;
     }
 
     // Extract ISP information
-    try {
-      const ispText: string | null = await page.textContent(
-        '[class*="isp"], [title*="ISP"]'
-      );
-      if (ispText) {
-        data.isp = ispText;
-      }
-    } catch (error) {
-      console.log('Could not extract ISP:', error);
+    const ispText: string | null = await page.textContent(
+      '[class*="isp"], [title*="ISP"]'
+    );
+    if (ispText) {
+      data.isp = ispText;
     }
 
     // Extract domain
-    try {
-      const domainText: string | null = await page.textContent(
-        '[class*="domain"]'
-      );
-      if (domainText) {
-        data.domain = domainText;
-      }
-    } catch (error) {
-      console.log('Could not extract domain:', error);
+    const domainText: string | null = await page.textContent(
+      '[class*="domain"]'
+    );
+    if (domainText) {
+      data.domain = domainText;
     }
 
     // Extract country
-    try {
-      const countryText: string | null = await page.textContent(
-        '[class*="country"], [title*="Country"]'
-      );
-      if (countryText) {
-        data.country = countryText;
-      }
-    } catch (error) {
-      console.log('Could not extract country:', error);
+    const countryText: string | null = await page.textContent(
+      '[class*="country"], [title*="Country"]'
+    );
+    if (countryText) {
+      data.country = countryText;
     }
 
     // Extract recent reports
@@ -149,15 +128,11 @@ export async function scrapeAbuseIPDB(
     }
 
     // Extract last reported date
-    try {
-      const lastReportedText: string | null = await page.textContent(
-        '[class*="last"], [class*="reported"]'
-      );
-      if (lastReportedText) {
-        data.lastReported = lastReportedText;
-      }
-    } catch (error) {
-      console.log('Could not extract last reported:', error);
+    const lastReportedText: string | null = await page.textContent(
+      '[class*="last"], [class*="reported"]'
+    );
+    if (lastReportedText) {
+      data.lastReported = lastReportedText;
     }
 
     // Get comprehensive page text

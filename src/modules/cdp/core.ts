@@ -407,14 +407,9 @@ export class Page {
   }
 
   /**
-   * Extract text content from an element
+   * Extract text content from an element (doesn't wait - just tries to extract)
    */
   async textContent(selector: string): Promise<string | null> {
-    // Don't wait for body selector
-    if (selector !== 'body') {
-      await this.waitForSelector(selector);
-    }
-
     // Enable Runtime domain
     try {
       await this.context.sendCommand('Runtime', 'enable');
@@ -422,21 +417,26 @@ export class Page {
       // Already enabled
     }
 
-    const result = await this.context.sendCommand('Runtime', 'evaluate', {
-      expression: `
-        (function() {
-          try {
-            const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
-            return element ? element.textContent.trim() : null;
-          } catch(e) {
-            return null;
-          }
-        })()
-      `,
-      returnByValue: true,
-    });
+    try {
+      const result = await this.context.sendCommand('Runtime', 'evaluate', {
+        expression: `
+          (function() {
+            try {
+              const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+              return element ? element.textContent.trim() : null;
+            } catch(e) {
+              return null;
+            }
+          })()
+        `,
+        returnByValue: true,
+      });
 
-    return (result.result?.value as string | null) || null;
+      return (result.result?.value as string | null) || null;
+    } catch (error) {
+      console.log(`[CDP] Error extracting text from ${selector}:`, error);
+      return null;
+    }
   }
 
   /**
@@ -468,21 +468,36 @@ export class Page {
   }
 
   /**
-   * Get attribute value from an element
+   * Get attribute value from an element (doesn't wait - just tries to extract)
    */
   async getAttribute(selector: string, attribute: string): Promise<string | null> {
-    await this.waitForSelector(selector);
+    // Enable Runtime domain
+    try {
+      await this.context.sendCommand('Runtime', 'enable');
+    } catch (error) {
+      // Already enabled
+    }
 
-    const result = await this.context.sendCommand('Runtime', 'evaluate', {
-      expression: `
-        (function() {
-          const element = document.querySelector('${selector}');
-          return element ? element.getAttribute('${attribute}') : null;
-        })()
-      `,
-    });
+    try {
+      const result = await this.context.sendCommand('Runtime', 'evaluate', {
+        expression: `
+          (function() {
+            try {
+              const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+              return element ? element.getAttribute('${attribute}') : null;
+            } catch(e) {
+              return null;
+            }
+          })()
+        `,
+        returnByValue: true,
+      });
 
-    return (result.result?.value as string | null) || null;
+      return (result.result?.value as string | null) || null;
+    } catch (error) {
+      console.log(`[CDP] Error getting attribute from ${selector}:`, error);
+      return null;
+    }
   }
 
   /**
@@ -555,21 +570,35 @@ export class Page {
   }
 
   /**
-   * Scroll to element
+   * Scroll to element (doesn't wait - just tries to scroll)
    */
   async scrollTo(selector: string): Promise<void> {
-    await this.waitForSelector(selector);
+    // Enable Runtime domain
+    try {
+      await this.context.sendCommand('Runtime', 'enable');
+    } catch (error) {
+      // Already enabled
+    }
 
-    await this.context.sendCommand('Runtime', 'evaluate', {
-      expression: `
-        (function() {
-          const element = document.querySelector('${selector}');
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        })()
-      `,
-    });
+    try {
+      await this.context.sendCommand('Runtime', 'evaluate', {
+        expression: `
+          (function() {
+            try {
+              const element = document.querySelector('${selector.replace(/'/g, "\\'")}');
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            } catch(e) {
+              // Ignore
+            }
+          })()
+        `,
+        returnByValue: true,
+      });
+    } catch (error) {
+      console.log(`[CDP] Error scrolling to ${selector}:`, error);
+    }
 
     await this._sleep(500);
   }

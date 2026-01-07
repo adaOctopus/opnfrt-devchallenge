@@ -32,11 +32,21 @@ function updateStatus(message: string, isError: boolean = false): void {
  * Format and display OSINT results
  */
 function displayResults(data: OSINTResults | null | undefined): void {
-  if (!resultDiv) return;
+  if (!resultDiv) {
+    console.error('[Popup] resultDiv is null!');
+    return;
+  }
 
-  if (!data || !data.sources) {
+  console.log('[Popup] displayResults called with:', data);
+
+  if (!data) {
     resultDiv.innerHTML = '<p>No data available</p>';
     return;
+  }
+
+  // Display even if sources is empty - show errors at least
+  if (!data.sources) {
+    data.sources = {};
   }
 
   let html: string = '<div class="results-container">';
@@ -215,17 +225,25 @@ if (fetchButton) {
           fetchButton.disabled = false;
           fetchButton.textContent = 'Get Intel';
 
-          if (response && response.success) {
+          console.log('[Popup] Response received:', response);
+          if (response && response.success && response.data) {
             updateStatus('Data collection complete!');
+            console.log('[Popup] Displaying results:', response.data);
             displayResults(response.data);
           } else {
             // If no response or failed, check storage after a delay
             if (!response) {
+              console.log('[Popup] No response, checking storage...');
               updateStatus('Collection in progress... Checking for results...');
               setTimeout(() => {
                 checkForStoredResults(ipAddress);
               }, 3000);
             } else {
+              console.log('[Popup] Response failed:', response.error);
+              // Even if there's an error, check storage - might have partial results
+              setTimeout(() => {
+                checkForStoredResults(ipAddress);
+              }, 2000);
               updateStatus(
                 response.error || 'Failed to collect OSINT data',
                 true
@@ -279,21 +297,30 @@ function checkForStoredResults(
   ipAddress: string,
   onSuccess?: () => void
 ): void {
+  console.log('[Popup] Checking storage for IP:', ipAddress);
   chrome.storage.local.get([`osint_${ipAddress}`], (result: {
     [key: string]: any;
   }) => {
     const data = result[`osint_${ipAddress}`] as OSINTResults | undefined;
-    if (
-      data &&
-      ((data.sources && Object.keys(data.sources).length > 0) ||
-        (data.errors && data.errors.length > 0))
-    ) {
-      if (!fetchButton) return;
-      fetchButton.disabled = false;
-      fetchButton.textContent = 'Get Intel';
-      updateStatus('Data collection complete!');
-      displayResults(data);
-      if (onSuccess) onSuccess();
+    console.log('[Popup] Storage data:', data);
+    if (data) {
+      // Display if we have any sources OR errors
+      const hasSources = data.sources && Object.keys(data.sources).length > 0;
+      const hasErrors = data.errors && data.errors.length > 0;
+      
+      if (hasSources || hasErrors) {
+        if (!fetchButton) return;
+        fetchButton.disabled = false;
+        fetchButton.textContent = 'Get Intel';
+        updateStatus('Data collection complete!');
+        console.log('[Popup] Displaying stored results');
+        displayResults(data);
+        if (onSuccess) onSuccess();
+      } else {
+        console.log('[Popup] No sources or errors found in data');
+      }
+    } else {
+      console.log('[Popup] No data found in storage');
     }
   });
 }

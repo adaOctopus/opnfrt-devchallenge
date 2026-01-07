@@ -98,33 +98,21 @@ export async function scrapeIPInfo(
       console.log('Could not extract structured data:', error);
     }
 
-    // Try to extract from specific selectors
-    try {
-      const countryElement: string | null = await page.textContent(
-        '[data-testid="country"], .country, [class*="country"]'
-      );
-      if (countryElement) data.country = countryElement;
-    } catch (error) {
-      // Ignore
-    }
+    // Try to extract from specific selectors (no waiting - just try)
+    const countryElement: string | null = await page.textContent(
+      '[data-testid="country"], .country, [class*="country"]'
+    );
+    if (countryElement) data.country = countryElement;
 
-    try {
-      const cityElement: string | null = await page.textContent(
-        '[data-testid="city"], .city, [class*="city"]'
-      );
-      if (cityElement) data.city = cityElement;
-    } catch (error) {
-      // Ignore
-    }
+    const cityElement: string | null = await page.textContent(
+      '[data-testid="city"], .city, [class*="city"]'
+    );
+    if (cityElement) data.city = cityElement;
 
-    try {
-      const orgElement: string | null = await page.textContent(
-        '[data-testid="org"], .org, [class*="org"]'
-      );
-      if (orgElement) data.org = orgElement;
-    } catch (error) {
-      // Ignore
-    }
+    const orgElement: string | null = await page.textContent(
+      '[data-testid="org"], .org, [class*="org"]'
+    );
+    if (orgElement) data.org = orgElement;
 
     // Extract location coordinates if available
     try {

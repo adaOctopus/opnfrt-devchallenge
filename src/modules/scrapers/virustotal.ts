@@ -28,21 +28,11 @@ export async function scrapeVirusTotal(
     console.log('[VirusTotal] Navigation complete');
 
     // Wait for page to load
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(4000);
 
-    // Wait for main content to appear (with fallback if selector doesn't exist)
-    try {
-      await page.waitForSelector('vt-ui-main-generic-report', { timeout: 15000 });
-      console.log('[VirusTotal] Main selector found');
-    } catch (error) {
-      console.log('[VirusTotal] Main selector not found, continuing anyway...');
-      // Don't wait for body - it should already exist
-      await page.waitForTimeout(2000);
-    }
-
-    // Scroll to ensure content is loaded
+    // Try to scroll to main content (won't fail if selector doesn't exist)
     await page.scrollTo('vt-ui-main-generic-report');
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(2000);
 
     const data: VirusTotalData = {
       source: 'VirusTotal',
