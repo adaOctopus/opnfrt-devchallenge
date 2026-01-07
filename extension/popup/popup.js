@@ -205,5 +205,5 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-export {};
+{};
 //# sourceMappingURL=popup.js.map

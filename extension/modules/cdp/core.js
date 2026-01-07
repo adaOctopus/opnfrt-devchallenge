@@ -5,7 +5,7 @@
 /**
  * CDPContext manages the connection to a browser tab via Chrome DevTools Protocol
  */
-export class CDPContext {
+class CDPContext {
     constructor(tabId) {
         this.attached = false;
         this.eventListeners = new Map();
@@ -127,7 +127,7 @@ export class CDPContext {
  * Page abstraction - similar to Playwright's page object
  * Provides high-level methods that compose multiple CDP commands
  */
-export class Page {
+class Page {
     constructor(context) {
         this.context = context;
         this.tabId = context.tabId;
@@ -381,7 +381,7 @@ export class Page {
 /**
  * Create a new page context (similar to Playwright's context.newPage())
  */
-export async function createPage(tabId) {
+async function createPage(tabId) {
     const context = new CDPContext(tabId);
     await context.attach();
     return new Page(context);

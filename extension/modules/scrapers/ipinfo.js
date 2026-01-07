@@ -2,14 +2,13 @@
  * IPInfo OSINT Scraper
  * Extracts geolocation and network information from IPInfo using browser automation
  */
-import { createPage } from '../cdp/core';
 /**
  * Scrape IPInfo for IP address intelligence
  * @param tabId - The tab ID to use for automation
  * @param ipAddress - The IP address to investigate
  * @returns Extracted geolocation and network data
  */
-export async function scrapeIPInfo(tabId, ipAddress) {
+async function scrapeIPInfo(tabId, ipAddress) {
     const page = await createPage(tabId);
     try {
         // Navigate to IPInfo

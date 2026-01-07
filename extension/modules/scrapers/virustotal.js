@@ -2,14 +2,13 @@
  * VirusTotal OSINT Scraper
  * Extracts threat intelligence data from VirusTotal using browser automation
  */
-import { createPage } from '../cdp/core';
 /**
  * Scrape VirusTotal for IP address intelligence
  * @param tabId - The tab ID to use for automation
  * @param ipAddress - The IP address to investigate
  * @returns Extracted threat intelligence data
  */
-export async function scrapeVirusTotal(tabId, ipAddress) {
+async function scrapeVirusTotal(tabId, ipAddress) {
     const page = await createPage(tabId);
     try {
         // Navigate to VirusTotal IP search

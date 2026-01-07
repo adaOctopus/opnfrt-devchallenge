@@ -2,14 +2,13 @@
  * AbuseIPDB OSINT Scraper
  * Extracts abuse reports and reputation data from AbuseIPDB using browser automation
  */
-import { createPage } from '../cdp/core';
 /**
  * Scrape AbuseIPDB for IP address intelligence
  * @param tabId - The tab ID to use for automation
  * @param ipAddress - The IP address to investigate
  * @returns Extracted abuse and reputation data
  */
-export async function scrapeAbuseIPDB(tabId, ipAddress) {
+async function scrapeAbuseIPDB(tabId, ipAddress) {
     const page = await createPage(tabId);
     try {
         // Navigate to AbuseIPDB
